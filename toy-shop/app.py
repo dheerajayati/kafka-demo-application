@@ -15,7 +15,7 @@ app.secret_key = 'dev-secret-key'
 
 # Kafka producer configuration
 conf = {
-    'bootstrap.servers': '3.68.92.91:9092',
+    'bootstrap.servers': 'localhost:19092',
     'client.id': socket.gethostname()
 }
 

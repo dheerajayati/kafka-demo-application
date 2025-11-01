@@ -12,21 +12,23 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 KAFKA_TOPIC = 'cartevent'
+# Fixed consumer group ID
+CONSUMER_GROUP_ID = 'warehouse_dashboard'
 
 def get_kafka_messages():
     """Get all available messages from Kafka"""
     messages = []
     
-    # Create consumer with unique group ID
+    # Create consumer with FIXED group ID
     consumer_config = {
-        'bootstrap.servers': '3.68.92.91:9092',
-        'group.id': f'warehouse_reader_{uuid.uuid4()}',
+        'bootstrap.servers': 'localhost:19092',
+        'group.id': CONSUMER_GROUP_ID,  # Fixed group ID
         'auto.offset.reset': 'earliest',
-        'enable.auto.commit': False
+        'enable.auto.commit': False  # Enable auto-commit to track offsets
     }
     
     consumer = Consumer(consumer_config)
-    logger.info("Created new Kafka consumer")
+    logger.info(f"Created Kafka consumer with group: {CONSUMER_GROUP_ID}")
     
     try:
         consumer.subscribe([KAFKA_TOPIC])
@@ -80,4 +82,4 @@ def get_orders():
         return jsonify([])
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5003)
+    app.run(debug=True, host='0.0.0.0', port=5001)

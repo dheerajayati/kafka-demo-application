@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmed - Kratos Toy Shop</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="app-bar">
+        <div class="container">
+            <h1>✅ Order Confirmed</h1>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="order-success fade-in">
+            <span class="material-icons" style="font-size: 4rem; color: var(--success);">check_circle</span>
+            <h1>Thank you, {{ name }}!</h1>
+            <p style="font-size: 1.2rem; margin-bottom: 1rem;">Your order has been successfully placed.</p>
+            
+            {% if order_id %}
+            <div class="order-id">
+                Order ID: {{ order_id }}
+            </div>
+            {% endif %}
+            
+            <p style="color: var(--text-secondary); margin: 2rem 0;">
+                Your order is being processed and will be shipped soon.
+            </p>
+            
+            <div class="flex gap-2" style="justify-content: center; margin-top: 2rem;">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <span class="material-icons">home</span>
+                    Return to Shop
+                </a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

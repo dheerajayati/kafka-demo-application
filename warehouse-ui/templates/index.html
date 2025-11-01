@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Packer Dashboard</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div>
+                <h1 class="dashboard-title">🏭 Warehouse Packer Dashboard</h1>
+                <p class="dashboard-subtitle">Real-time order processing system</p>
+            </div>
+            <div class="live-indicator">
+                <span class="material-icons" style="color: #4CAF50; vertical-align: middle;">fiber_manual_record</span>
+                <span>Live</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Stats Overview -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="total-orders">0</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-products">0</div>
+                <div class="stat-label">Products to Pack</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-revenue">$0</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div>
+                <button class="btn btn-primary" onclick="refreshOrders()" id="refresh-btn">
+                    <span class="material-icons">refresh</span>
+                    Refresh Orders
+                </button>
+                <button class="btn btn-outline" onclick="markAllProcessed()">
+                    <span class="material-icons">check_circle</span>
+                    Mark All Processed
+                </button>
+            </div>
+            <div class="last-update">
+                Last updated: <span id="last-update-time">Never</span>
+            </div>
+        </div>
+
+        <!-- Orders Container -->
+        <div id="orders-container">
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <h2 class="empty-title">No Orders Available</h2>
+                <p class="empty-subtitle">New orders will appear here when customers place them.</p>
+                <button class="btn btn-primary" onclick="refreshOrders()">
+                    <span class="material-icons">refresh</span>
+                    Check for New Orders
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentOrders = [];
+
+        function refreshOrders() {
+            const refreshBtn = document.getElementById('refresh-btn');
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<div class="loading-spinner"></div> Refreshing...';
+            
+            fetch('/get_orders')
+                .then(response => response.json())
+                .then(orders => {
+                    currentOrders = orders;
+                    updateDashboard(orders);
+                    updateStats(orders);
+                    updateLastUpdateTime();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Failed to fetch orders. Please check your connection.');
+                })
+                .finally(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '<span class="material-icons">refresh</span> Refresh Orders';
+                });
+        }
+
+        function updateDashboard(orders) {
+            const container = document.getElementById('orders-container');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <h2 class="empty-title">No New Orders</h2>
+                        <p class="empty-subtitle">All orders have been processed. Great job!</p>
+                        <button class="btn btn-primary" onclick="refreshOrders()">
+                            <span class="material-icons">refresh</span>
+                            Check Again
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="orders-grid">
+                    ${orders.map(order => createOrderCard(order)).join('')}
+                </div>
+            `;
+        }
+
+        function createOrderCard(order) {
+            const orderId = order.order_id || Math.random().toString(36).substr(2, 9);
+            const timestamp = order.display_timestamp || new Date().toLocaleString();
+            
+            return `
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="customer-info">
+                            <h2>📦 Order for ${order.customer_name}</h2>
+                            <p class="customer-email">${order.customer_email || 'No email provided'}</p>
+                        </div>
+                        <div class="order-meta">
+                            <div class="order-id">#${orderId}</div>
+                            <div class="order-timestamp">${timestamp}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="address-section">
+                        <div class="address-label">🚚 Delivery Address</div>
+                        <div class="address-text">${order.delivery_address}</div>
+                    </div>
+                    
+                    <div class="products-section">
+                        <h3 class="section-title">
+                            <span class="material-icons">inventory_2</span>
+                            Products to Pack (${order.products.length})
+                        </h3>
+                        <div class="product-grid">
+                            ${order.products.map(product => `
+                                <div class="product-item">
+                                    <div class="product-info">
+                                        <div class="product-name">${product.name}</div>
+                                        <div class="product-price">$${product.price.toFixed(2)}</div>
+                                    </div>
+                                    <span class="material-icons" style="color: var(--success);">check_box</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="order-footer">
+                        <div class="total-amount">$${order.total_amount.toFixed(2)}</div>
+                        <div class="product-count">${order.products.length} items</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStats(orders) {
+            const totalOrders = orders.length;
+            const totalProducts = orders.reduce((sum, order) => sum + order.products.length, 0);
+            const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+            
+            document.getElementById('total-orders').textContent = totalOrders;
+            document.getElementById('total-products').textContent = totalProducts;
+            document.getElementById('total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('last-update-time').textContent = now.toLocaleTimeString();
+        }
+
+        function markAllProcessed() {
+            if (currentOrders.length === 0) {
+                alert('No orders to mark as processed!');
+                return;
+            }
+            
+            if (confirm(`Mark ${currentOrders.length} orders as processed?`)) {
+                // In a real application, you would send this to your backend
+                alert(`${currentOrders.length} orders marked as processed!`);
+                refreshOrders(); // Refresh to simulate processing
+            }
+        }
+
+        function showError(message) {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = `
+                <div class="error-state">
+                    <span class="material-icons" style="font-size: 3rem; margin-bottom: 1rem;">error</span>
+                    <h2>Connection Error</h2>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="refreshOrders()" style="margin-top: 1rem;">
+                        <span class="material-icons">refresh</span>
+                        Try Again
+                    </button>
+                </div>
+            `;
+        }
+
+        // Initial load
+        refreshOrders();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshOrders, 30000);
+    </script>
+</body>
+</html>
